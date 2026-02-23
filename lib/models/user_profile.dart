@@ -11,6 +11,7 @@ class UserProfile {
   final String phoneNumber;
   final String gender;
   final String age;
+  final String role;
 
   const UserProfile({
     required this.id,
@@ -25,9 +26,11 @@ class UserProfile {
     this.phoneNumber = '',
     this.gender = '',
     this.age = '',
+    this.role = 'user',
   });
 
   String get fullName => '$firstName $lastName';
   bool get hasFreeCoffee => stamps >= totalStamps;
   int get stampsRemaining => totalStamps - stamps;
+  bool get isAdmin => role == 'admin';
 }

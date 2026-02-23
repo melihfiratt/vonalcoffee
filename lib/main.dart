@@ -11,7 +11,9 @@ import 'screens/social_screen.dart';
 import 'screens/wallet_screen.dart';
 import 'screens/activity_screen.dart';
 import 'screens/stores_screen.dart';
+import 'screens/admin/admin_dashboard_screen.dart';
 import 'services/seed_service.dart';
+import 'services/firestore_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -38,6 +40,8 @@ class VonalCoffeeApp extends StatelessWidget {
       title: 'Vonal Coffee',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme,
+      darkTheme: AppTheme.darkTheme,
+      themeMode: ThemeMode.light,
       home: const AuthGate(),
     );
   }
@@ -58,19 +62,16 @@ class _AuthGateState extends State<AuthGate> {
     _hasSeeded = true;
 
     try {
-      // Check if stores collection has data
       final storesSnap = await FirebaseFirestore.instance
           .collection('stores')
           .limit(1)
           .get();
 
       if (storesSnap.docs.isEmpty) {
-        // First time — seed the database with demo data
         await SeedService().seedDatabase();
         await SeedService().seedUserTransactions(uid);
       }
     } catch (e) {
-      // Silently fail — data will just show empty states
       debugPrint('Auto-seed skipped: $e');
     }
   }
@@ -97,13 +98,58 @@ class _AuthGateState extends State<AuthGate> {
           );
         }
         if (snapshot.hasData && snapshot.data != null) {
-          // Auto-seed data on first login
           _autoSeedIfNeeded(snapshot.data!.uid);
-          return const MainScreen();
+          return _RoleRouter(uid: snapshot.data!.uid);
         }
         return const LoginScreen();
       },
     );
+  }
+}
+
+/// Routes to AdminDashboardScreen or MainScreen based on Firestore role.
+/// Uses a single read (not a stream) to minimize Firebase usage.
+class _RoleRouter extends StatefulWidget {
+  final String uid;
+  const _RoleRouter({required this.uid});
+
+  @override
+  State<_RoleRouter> createState() => _RoleRouterState();
+}
+
+class _RoleRouterState extends State<_RoleRouter> {
+  final _firestoreService = FirestoreService();
+  String? _role;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkRole();
+  }
+
+  Future<void> _checkRole() async {
+    final role = await _firestoreService.getUserRole(widget.uid);
+    if (mounted) {
+      setState(() => _role = role);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_role == null) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    if (_role == 'admin') {
+      return Theme(
+        data: AppTheme.darkTheme,
+        child: const AdminDashboardScreen(),
+      );
+    }
+
+    return const MainScreen();
   }
 }
 

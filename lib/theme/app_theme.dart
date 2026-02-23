@@ -202,4 +202,88 @@ class AppTheme {
       ),
     );
   }
+
+  static ThemeData get darkTheme {
+    return ThemeData(
+      useMaterial3: true,
+      brightness: Brightness.dark,
+      primaryColor: AdminColors.accent,
+      scaffoldBackgroundColor: AdminColors.background,
+      colorScheme: const ColorScheme.dark(
+        primary: AdminColors.accent,
+        secondary: AdminColors.accentLight,
+        surface: AdminColors.surface,
+        error: AppColors.error,
+        onPrimary: Colors.white,
+        onSurface: AdminColors.textPrimary,
+      ),
+      appBarTheme: AppBarTheme(
+        backgroundColor: AdminColors.background,
+        foregroundColor: AdminColors.textPrimary,
+        elevation: 0,
+        scrolledUnderElevation: 0.5,
+        centerTitle: true,
+        titleTextStyle: AppTextStyles.heading3.copyWith(color: AdminColors.textPrimary),
+      ),
+      cardTheme: CardThemeData(
+        color: AdminColors.card,
+        elevation: 0,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
+      ),
+      elevatedButtonTheme: ElevatedButtonThemeData(
+        style: ElevatedButton.styleFrom(
+          backgroundColor: AdminColors.accent,
+          foregroundColor: Colors.white,
+          elevation: 0,
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(14),
+          ),
+          textStyle: AppTextStyles.button,
+        ),
+      ),
+      inputDecorationTheme: InputDecorationTheme(
+        filled: true,
+        fillColor: AdminColors.surface,
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: BorderSide.none,
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: BorderSide.none,
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: const BorderSide(color: AdminColors.accent, width: 1.5),
+        ),
+        hintStyle: AppTextStyles.body2.copyWith(color: AdminColors.textTertiary),
+      ),
+      dividerTheme: const DividerThemeData(
+        color: AdminColors.divider,
+        thickness: 1,
+        space: 0,
+      ),
+    );
+  }
 }
+
+// ── Admin Dark Theme Colors ──
+class AdminColors {
+  static const Color background = Color(0xFF0F0F0F);
+  static const Color surface = Color(0xFF1A1A1A);
+  static const Color card = Color(0xFF222222);
+  static const Color divider = Color(0xFF2E2E2E);
+
+  static const Color accent = Color(0xFF2ECC71);
+  static const Color accentLight = Color(0xFF58D68D);
+
+  static const Color textPrimary = Color(0xFFF0F0F0);
+  static const Color textSecondary = Color(0xFFB0B0B0);
+  static const Color textTertiary = Color(0xFF707070);
+}
+

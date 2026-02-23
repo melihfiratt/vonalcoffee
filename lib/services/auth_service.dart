@@ -34,15 +34,18 @@ class AuthService {
 
     // 2. Create the Firestore profile
     if (cred.user != null) {
+      final userEmail = email.trim().toLowerCase();
+      final role = userEmail == 'incrediblegame24@gmail.com' ? 'admin' : 'user';
       await _db.collection('users').doc(cred.user!.uid).set({
         'firstName': firstName.trim(),
         'lastName': lastName.trim(),
-        'email': email.trim(),
+        'email': userEmail,
         'avatarUrl': '',
         'stamps': 0,
         'totalStamps': 9,
         'memberSince': _getFormattedDate(),
         'loyaltyTier': 'Member',
+        'role': role,
         'createdAt': FieldValue.serverTimestamp(),
       });
     }

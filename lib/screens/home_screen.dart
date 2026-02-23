@@ -5,6 +5,7 @@ import '../theme/app_theme.dart';
 import '../services/firestore_service.dart';
 import '../models/user_profile.dart';
 import '../models/treat_item.dart';
+import '../models/campaign.dart';
 import '../widgets/quick_action_button.dart';
 import '../widgets/treat_card.dart';
 import '../widgets/section_header.dart';
@@ -129,7 +130,35 @@ class _HomeScreenState extends State<HomeScreen> {
               _buildReferBanner(),
               const SizedBox(height: 20),
 
-              // ── News / Info Banners ──
+              // ── Campaigns from Firestore (single read) ──
+              FutureBuilder<List<Campaign>>(
+                future: _firestoreService.getActiveCampaigns(),
+                builder: (context, snapshot) {
+                  if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                    return const SizedBox.shrink();
+                  }
+                  final campaigns = snapshot.data!;
+                  return Column(
+                    children: campaigns.map((campaign) {
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 14),
+                        child: _buildInfoBanner(
+                          emoji: '🎯',
+                          title: campaign.title,
+                          subtitle: campaign.description,
+                          gradient: [
+                            const Color(0xFF0F7A1E).withValues(alpha: 0.08),
+                            const Color(0xFF2E9E3E).withValues(alpha: 0.12),
+                          ],
+                          onTap: () => _showSnackBar('📢 ${campaign.title}'),
+                        ),
+                      );
+                    }).toList(),
+                  );
+                },
+              ),
+
+              // ── Static Banners ──
               _buildInfoBanner(
                 emoji: '🌿',
                 title: 'Our Coffee Beans',

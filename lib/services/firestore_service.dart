@@ -5,6 +5,7 @@ import '../models/transaction.dart' as local_tx;
 import '../models/store_location.dart';
 import '../models/social_post.dart';
 import '../models/treat_item.dart';
+import '../models/campaign.dart';
 
 class FirestoreService {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
@@ -27,6 +28,7 @@ class FirestoreService {
         phoneNumber: data['phoneNumber'] ?? '',
         gender: data['gender'] ?? '',
         age: data['age'] ?? '',
+        role: data['role'] ?? 'user',
       );
     }).handleError((e) {
       debugPrint('🔴 Firestore getUserProfile error: $e');
@@ -160,5 +162,206 @@ class FirestoreService {
     }).handleError((e) {
       debugPrint('🔴 Firestore getTreats error: $e');
     });
+  }
+
+  // ── Admin: Get user role (single read, no stream) ──
+  Future<String> getUserRole(String uid) async {
+    try {
+      final doc = await _db.collection('users').doc(uid).get();
+      if (!doc.exists) return 'user';
+      return doc.data()?['role'] ?? 'user';
+    } catch (e) {
+      debugPrint('🔴 getUserRole error: $e');
+      return 'user';
+    }
+  }
+
+  // ── Admin: Get user by UID (single read for QR scan) ──
+  Future<UserProfile?> getUserByUid(String uid) async {
+    try {
+      final doc = await _db.collection('users').doc(uid).get();
+      if (!doc.exists) return null;
+      final data = doc.data()!;
+      return UserProfile(
+        id: doc.id,
+        firstName: data['firstName'] ?? '',
+        lastName: data['lastName'] ?? '',
+        email: data['email'] ?? '',
+        avatarUrl: data['avatarUrl'] ?? '',
+        stamps: data['stamps'] ?? 0,
+        totalStamps: data['totalStamps'] ?? 9,
+        memberSince: data['memberSince'] ?? '',
+        loyaltyTier: data['loyaltyTier'] ?? 'Member',
+        role: data['role'] ?? 'user',
+      );
+    } catch (e) {
+      debugPrint('🔴 getUserByUid error: $e');
+      return null;
+    }
+  }
+
+  // ── Admin: Search user by email (single read) ──
+  Future<UserProfile?> getUserByEmail(String email) async {
+    try {
+      final snap = await _db
+          .collection('users')
+          .where('email', isEqualTo: email.trim().toLowerCase())
+          .limit(1)
+          .get();
+      if (snap.docs.isEmpty) return null;
+      final doc = snap.docs.first;
+      final data = doc.data();
+      return UserProfile(
+        id: doc.id,
+        firstName: data['firstName'] ?? '',
+        lastName: data['lastName'] ?? '',
+        email: data['email'] ?? '',
+        avatarUrl: data['avatarUrl'] ?? '',
+        stamps: data['stamps'] ?? 0,
+        totalStamps: data['totalStamps'] ?? 9,
+        memberSince: data['memberSince'] ?? '',
+        loyaltyTier: data['loyaltyTier'] ?? 'Member',
+        role: data['role'] ?? 'user',
+      );
+    } catch (e) {
+      debugPrint('🔴 getUserByEmail error: $e');
+      return null;
+    }
+  }
+
+  // ── Admin: Update user role ──
+  Future<void> updateUserRole(String uid, String role) async {
+    try {
+      await _db.collection('users').doc(uid).update({'role': role});
+    } catch (e) {
+      debugPrint('🔴 updateUserRole error: $e');
+      rethrow;
+    }
+  }
+
+  // ── Admin: Add stamps to user ──
+  Future<void> addStamps(String uid, int count) async {
+    try {
+      await _db.collection('users').doc(uid).update({
+        'stamps': FieldValue.increment(count),
+      });
+      // Log the stamp addition (minimal write)
+      await _db.collection('stamp_logs').add({
+        'userId': uid,
+        'stampsAdded': count,
+        'timestamp': FieldValue.serverTimestamp(),
+      });
+    } catch (e) {
+      debugPrint('🔴 addStamps error: $e');
+      rethrow;
+    }
+  }
+
+  // ── Campaigns (single reads for admin, stream for home) ──
+  Stream<List<Campaign>> getCampaigns() {
+    return _db
+        .collection('campaigns')
+        .orderBy('createdAt', descending: true)
+        .snapshots()
+        .map((snap) {
+      return snap.docs.map((doc) {
+        final data = doc.data();
+        return Campaign(
+          id: doc.id,
+          title: data['title'] ?? '',
+          description: data['description'] ?? '',
+          imageUrl: data['imageUrl'] ?? '',
+          endDate: (data['endDate'] as Timestamp?)?.toDate(),
+          createdAt: (data['createdAt'] as Timestamp?)?.toDate(),
+          isActive: data['isActive'] ?? true,
+        );
+      }).toList();
+    }).handleError((e) {
+      debugPrint('🔴 getCampaigns error: $e');
+    });
+  }
+
+  // ── Admin: Get active campaigns only (for home screen, single read) ──
+  Future<List<Campaign>> getActiveCampaigns() async {
+    try {
+      final snap = await _db
+          .collection('campaigns')
+          .where('isActive', isEqualTo: true)
+          .orderBy('createdAt', descending: true)
+          .limit(5)
+          .get();
+      return snap.docs.map((doc) {
+        final data = doc.data();
+        return Campaign(
+          id: doc.id,
+          title: data['title'] ?? '',
+          description: data['description'] ?? '',
+          imageUrl: data['imageUrl'] ?? '',
+          endDate: (data['endDate'] as Timestamp?)?.toDate(),
+          createdAt: (data['createdAt'] as Timestamp?)?.toDate(),
+          isActive: data['isActive'] ?? true,
+        );
+      }).toList();
+    } catch (e) {
+      debugPrint('🔴 getActiveCampaigns error: $e');
+      return [];
+    }
+  }
+
+  Future<void> createCampaign({
+    required String title,
+    required String description,
+    required DateTime endDate,
+    String imageUrl = '',
+  }) async {
+    try {
+      await _db.collection('campaigns').add({
+        'title': title,
+        'description': description,
+        'endDate': Timestamp.fromDate(endDate),
+        'imageUrl': imageUrl,
+        'isActive': true,
+        'createdAt': FieldValue.serverTimestamp(),
+      });
+    } catch (e) {
+      debugPrint('🔴 createCampaign error: $e');
+      rethrow;
+    }
+  }
+
+  Future<void> deleteCampaign(String id) async {
+    try {
+      await _db.collection('campaigns').doc(id).delete();
+    } catch (e) {
+      debugPrint('🔴 deleteCampaign error: $e');
+      rethrow;
+    }
+  }
+
+  // ── Admin Analytics (single reads — Firebase-friendly) ──
+  Future<int> getTotalUsersCount() async {
+    try {
+      final snap = await _db.collection('users').count().get();
+      return snap.count ?? 0;
+    } catch (e) {
+      debugPrint('🔴 getTotalUsersCount error: $e');
+      return 0;
+    }
+  }
+
+  Future<int> getTodayStampsCount() async {
+    try {
+      final now = DateTime.now();
+      final startOfDay = DateTime(now.year, now.month, now.day);
+      final snap = await _db
+          .collection('stamp_logs')
+          .where('timestamp', isGreaterThanOrEqualTo: Timestamp.fromDate(startOfDay))
+          .count()
+          .get();
+      return snap.count ?? 0;
+    } catch (e) {
+      debugPrint('🔴 getTodayStampsCount error: $e');
+      return 0;
+    }
   }
 }
