@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/foundation.dart';
 import '../models/user_profile.dart';
 import '../models/transaction.dart' as local_tx;
 import '../models/store_location.dart';
@@ -23,8 +24,23 @@ class FirestoreService {
         totalStamps: data['totalStamps'] ?? 9,
         memberSince: data['memberSince'] ?? '',
         loyaltyTier: data['loyaltyTier'] ?? 'Member',
+        phoneNumber: data['phoneNumber'] ?? '',
+        gender: data['gender'] ?? '',
+        age: data['age'] ?? '',
       );
+    }).handleError((e) {
+      debugPrint('🔴 Firestore getUserProfile error: $e');
     });
+  }
+
+  // ── Update User Profile ──
+  Future<void> updateUserProfile(String uid, Map<String, dynamic> data) async {
+    try {
+      await _db.collection('users').doc(uid).update(data);
+    } catch (e) {
+      debugPrint('🔴 Firestore updateUserProfile error: $e');
+      rethrow;
+    }
   }
 
   // ── Transactions ──
@@ -48,6 +64,8 @@ class FirestoreService {
           stampsEarned: data['stampsEarned'] ?? 1,
         );
       }).toList();
+    }).handleError((e) {
+      debugPrint('🔴 Firestore getTransactions error: $e');
     });
   }
 
@@ -71,6 +89,8 @@ class FirestoreService {
           amenities: List<String>.from(data['amenities'] ?? []),
         );
       }).toList();
+    }).handleError((e) {
+      debugPrint('🔴 Firestore getStores error: $e');
     });
   }
 
@@ -95,9 +115,35 @@ class FirestoreService {
           mood: data['mood'],
         );
       }).toList();
+    }).handleError((e) {
+      debugPrint('🔴 Firestore getSocialPosts error: $e');
     });
   }
-  
+
+  // ── Create Social Post ──
+  Future<void> createPost({
+    required String userName,
+    required String message,
+    required String branchName,
+    String? mood,
+  }) async {
+    try {
+      await _db.collection('posts').add({
+        'userName': userName,
+        'userAvatar': '',
+        'message': message,
+        'timestamp': FieldValue.serverTimestamp(),
+        'branchName': branchName,
+        'likes': 0,
+        'isCheckedIn': true,
+        'mood': mood,
+      });
+    } catch (e) {
+      debugPrint('🔴 Firestore createPost error: $e');
+      rethrow;
+    }
+  }
+
   // ── Treats ──
   Stream<List<TreatItem>> getTreats() {
     return _db.collection('treats').snapshots().map((snap) {
@@ -111,6 +157,8 @@ class FirestoreService {
           promoText: data['promoText'],
         );
       }).toList();
+    }).handleError((e) {
+      debugPrint('🔴 Firestore getTreats error: $e');
     });
   }
 }

@@ -1,18 +1,38 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../theme/app_theme.dart';
 import '../services/auth_service.dart';
 import '../services/firestore_service.dart';
 import '../services/seed_service.dart';
 import '../models/user_profile.dart';
+import 'manage_account_screen.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
-    final uid = FirebaseAuth.instance.currentUser!.uid;
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid == null) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
     final firestoreService = FirestoreService();
+
+    void showComingSoon(String feature) {
+      HapticFeedback.lightImpact();
+      ScaffoldMessenger.of(context).hideCurrentSnackBar();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('$feature — coming soon!'),
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          duration: const Duration(seconds: 2),
+        ),
+      );
+    }
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -44,27 +64,32 @@ class SettingsScreen extends StatelessWidget {
 
             // Settings Lists
             _buildSettingsGroup([
-              _buildSettingItem(Icons.local_offer_outlined, 'Promo Codes'),
-              _buildSettingItem(Icons.card_membership_rounded, 'Add Loyalty Card'),
+              _buildSettingItem(Icons.local_offer_outlined, 'Promo Codes', onTap: () => showComingSoon('Promo Codes')),
+              _buildSettingItem(Icons.card_membership_rounded, 'Add Loyalty Card', onTap: () => showComingSoon('Add Loyalty Card')),
             ]),
             
             _buildSectionTitle('Account'),
             _buildSettingsGroup([
-              _buildSettingItem(Icons.person_outline_rounded, 'Manage My Account'),
-              _buildSettingItem(Icons.credit_card_rounded, 'Payment Methods'),
-              _buildSettingItem(Icons.lock_outline_rounded, 'Passcode & Face ID'),
-              _buildSettingItem(Icons.notifications_none_rounded, 'Notifications'),
+              _buildSettingItem(Icons.person_outline_rounded, 'Manage My Account', onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const ManageAccountScreen()),
+                );
+              }),
+              _buildSettingItem(Icons.credit_card_rounded, 'Payment Methods', onTap: () => showComingSoon('Payment Methods')),
+              _buildSettingItem(Icons.lock_outline_rounded, 'Passcode & Face ID', onTap: () => showComingSoon('Passcode & Face ID')),
+              _buildSettingItem(Icons.notifications_none_rounded, 'Notifications', onTap: () => showComingSoon('Notification Settings')),
             ]),
 
             _buildSectionTitle('Support'),
             _buildSettingsGroup([
-              _buildSettingItem(Icons.help_outline_rounded, 'Help Centre'),
-              _buildSettingItem(Icons.play_circle_outline_rounded, 'App Tutorial'),
+              _buildSettingItem(Icons.help_outline_rounded, 'Help Centre', onTap: () => showComingSoon('Help Centre')),
+              _buildSettingItem(Icons.play_circle_outline_rounded, 'App Tutorial', onTap: () => showComingSoon('App Tutorial')),
             ]),
 
             _buildSectionTitle('Other'),
             _buildSettingsGroup([
-              _buildSettingItem(Icons.star_border_rounded, 'Rate Our App'),
+              _buildSettingItem(Icons.star_border_rounded, 'Rate Our App', onTap: () => showComingSoon('Rate Our App')),
               _buildSettingItem(
                 Icons.logout_rounded,
                 'Log Out',

@@ -8,6 +8,9 @@ class UserProfile {
   final int totalStamps;
   final String memberSince;
   final String loyaltyTier;
+  final String phoneNumber;
+  final String gender;
+  final String age;
 
   const UserProfile({
     required this.id,
@@ -19,6 +22,9 @@ class UserProfile {
     this.totalStamps = 9,
     required this.memberSince,
     this.loyaltyTier = 'Gold',
+    this.phoneNumber = '',
+    this.gender = '',
+    this.age = '',
   });
 
   String get fullName => '$firstName $lastName';

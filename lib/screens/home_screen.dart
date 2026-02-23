@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../theme/app_theme.dart';
 import '../services/firestore_service.dart';
@@ -18,7 +19,7 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   final _firestoreService = FirestoreService();
-  final String _uid = FirebaseAuth.instance.currentUser!.uid;
+  String get _uid => FirebaseAuth.instance.currentUser?.uid ?? '';
 
   String _getGreeting() {
     final hour = DateTime.now().hour;
@@ -27,8 +28,27 @@ class _HomeScreenState extends State<HomeScreen> {
     return 'Good evening';
   }
 
+  void _showSnackBar(String message) {
+    HapticFeedback.lightImpact();
+    ScaffoldMessenger.of(context).hideCurrentSnackBar();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        duration: const Duration(seconds: 2),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    if (_uid.isEmpty) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+
     return Scaffold(
       backgroundColor: AppColors.surface,
       body: SafeArea(
@@ -56,13 +76,13 @@ class _HomeScreenState extends State<HomeScreen> {
                     QuickActionButton(
                       icon: Icons.delivery_dining_rounded,
                       label: 'Paket\nServis',
-                      onTap: () {},
+                      onTap: () => _showSnackBar('🛵 Paket Servis coming soon!'),
                     ),
                     const SizedBox(width: 14),
                     QuickActionButton(
                       icon: Icons.coffee_rounded,
                       label: 'Evde\nKahve',
-                      onTap: () {},
+                      onTap: () => _showSnackBar('☕ Evde Kahve coming soon!'),
                     ),
                   ],
                 ),
@@ -70,9 +90,10 @@ class _HomeScreenState extends State<HomeScreen> {
               const SizedBox(height: 28),
 
               // ── Exclusive Treats (Stream) ──
-              const SectionHeader(
+              SectionHeader(
                 title: 'Exclusive Treats',
                 actionText: 'See All',
+                onActionTap: () => _showSnackBar('All treats coming soon!'),
               ),
               const SizedBox(height: 14),
               SizedBox(
@@ -93,7 +114,10 @@ class _HomeScreenState extends State<HomeScreen> {
                       padding: const EdgeInsets.only(left: 20, right: 4),
                       itemCount: treats.length,
                       itemBuilder: (context, index) {
-                        return TreatCard(treat: treats[index]);
+                        return TreatCard(
+                          treat: treats[index],
+                          onTap: () => _showSnackBar('${treats[index].title} — details coming soon!'),
+                        );
                       },
                     );
                   },
@@ -115,6 +139,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   const Color(0xFF2E7D32).withValues(alpha: 0.08),
                   const Color(0xFF66BB6A).withValues(alpha: 0.12),
                 ],
+                onTap: () => _showSnackBar('🌿 Learn more about our beans — coming soon!'),
               ),
               const SizedBox(height: 14),
               _buildInfoBanner(
@@ -125,6 +150,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   const Color(0xFFFF8F00).withValues(alpha: 0.08),
                   const Color(0xFFFFCA28).withValues(alpha: 0.12),
                 ],
+                onTap: () => _showSnackBar('🎉 Happy Hour details — coming soon!'),
               ),
               const SizedBox(height: 30),
             ],
@@ -185,70 +211,73 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _buildReferBanner() {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20),
-      child: Container(
-        padding: const EdgeInsets.all(20),
-        decoration: BoxDecoration(
-          gradient: const LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              AppColors.primary,
-              AppColors.primaryLight,
+      child: GestureDetector(
+        onTap: () => _showSnackBar('🎁 Referral link copied! Share with friends.'),
+        child: Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                AppColors.primary,
+                AppColors.primaryLight,
+              ],
+            ),
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: [
+              BoxShadow(
+                color: AppColors.primary.withValues(alpha: 0.3),
+                blurRadius: 16,
+                offset: const Offset(0, 6),
+              ),
             ],
           ),
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: [
-            BoxShadow(
-              color: AppColors.primary.withValues(alpha: 0.3),
-              blurRadius: 16,
-              offset: const Offset(0, 6),
-            ),
-          ],
-        ),
-        child: Row(
-          children: [
-            Container(
-              width: 50,
-              height: 50,
-              decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.2),
-                borderRadius: BorderRadius.circular(14),
+          child: Row(
+            children: [
+              Container(
+                width: 50,
+                height: 50,
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.2),
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: const Icon(
+                  Icons.card_giftcard_rounded,
+                  color: Colors.white,
+                  size: 26,
+                ),
               ),
-              child: const Icon(
-                Icons.card_giftcard_rounded,
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Arkadaşını Davet Et',
+                      style: AppTextStyles.subtitle1.copyWith(
+                        color: Colors.white,
+                        fontSize: 16,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Invite a friend & both earn a free coffee!',
+                      style: AppTextStyles.body2.copyWith(
+                        color: Colors.white.withValues(alpha: 0.85),
+                        fontSize: 12,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const Icon(
+                Icons.arrow_forward_ios_rounded,
                 color: Colors.white,
-                size: 26,
+                size: 18,
               ),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Arkadaşını Davet Et',
-                    style: AppTextStyles.subtitle1.copyWith(
-                      color: Colors.white,
-                      fontSize: 16,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'Invite a friend & both earn a free coffee!',
-                    style: AppTextStyles.body2.copyWith(
-                      color: Colors.white.withValues(alpha: 0.85),
-                      fontSize: 12,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const Icon(
-              Icons.arrow_forward_ios_rounded,
-              color: Colors.white,
-              size: 18,
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -259,47 +288,51 @@ class _HomeScreenState extends State<HomeScreen> {
     required String title,
     required String subtitle,
     required List<Color> gradient,
+    VoidCallback? onTap,
   }) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20),
-      child: Container(
-        padding: const EdgeInsets.all(18),
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: gradient,
+      child: GestureDetector(
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.all(18),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: gradient,
+            ),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: AppColors.divider.withValues(alpha: 0.5),
+              width: 1,
+            ),
           ),
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(
-            color: AppColors.divider.withValues(alpha: 0.5),
-            width: 1,
-          ),
-        ),
-        child: Row(
-          children: [
-            Text(emoji, style: const TextStyle(fontSize: 36)),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(title, style: AppTextStyles.subtitle1.copyWith(fontSize: 15)),
-                  const SizedBox(height: 4),
-                  Text(
-                    subtitle,
-                    style: AppTextStyles.body2.copyWith(fontSize: 12),
-                    maxLines: 2,
-                  ),
-                ],
+          child: Row(
+            children: [
+              Text(emoji, style: const TextStyle(fontSize: 36)),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(title, style: AppTextStyles.subtitle1.copyWith(fontSize: 15)),
+                    const SizedBox(height: 4),
+                    Text(
+                      subtitle,
+                      style: AppTextStyles.body2.copyWith(fontSize: 12),
+                      maxLines: 2,
+                    ),
+                  ],
+                ),
               ),
-            ),
-            const Icon(
-              Icons.arrow_forward_ios_rounded,
-              color: AppColors.textTertiary,
-              size: 16,
-            ),
-          ],
+              const Icon(
+                Icons.arrow_forward_ios_rounded,
+                color: AppColors.textTertiary,
+                size: 16,
+              ),
+            ],
+          ),
         ),
       ),
     );

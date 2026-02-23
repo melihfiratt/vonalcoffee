@@ -1,11 +1,46 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../theme/app_theme.dart';
 import '../models/social_post.dart';
 
-class SocialPostCard extends StatelessWidget {
+class SocialPostCard extends StatefulWidget {
   final SocialPost post;
 
   const SocialPostCard({super.key, required this.post});
+
+  @override
+  State<SocialPostCard> createState() => _SocialPostCardState();
+}
+
+class _SocialPostCardState extends State<SocialPostCard> {
+  bool _isLiked = false;
+  late int _likeCount;
+
+  @override
+  void initState() {
+    super.initState();
+    _likeCount = widget.post.likes;
+  }
+
+  void _toggleLike() {
+    HapticFeedback.lightImpact();
+    setState(() {
+      _isLiked = !_isLiked;
+      _likeCount += _isLiked ? 1 : -1;
+    });
+  }
+
+  void _showSnackBar(String message) {
+    ScaffoldMessenger.of(context).hideCurrentSnackBar();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        duration: const Duration(seconds: 2),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -38,10 +73,10 @@ class SocialPostCard extends StatelessWidget {
                     Row(
                       children: [
                         Text(
-                          post.userName,
+                          widget.post.userName,
                           style: AppTextStyles.subtitle1.copyWith(fontSize: 14),
                         ),
-                        if (post.isCheckedIn) ...[
+                        if (widget.post.isCheckedIn) ...[
                           const SizedBox(width: 6),
                           Container(
                             padding: const EdgeInsets.symmetric(
@@ -77,34 +112,53 @@ class SocialPostCard extends StatelessWidget {
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      post.timeAgo,
+                      widget.post.timeAgo,
                       style: AppTextStyles.caption.copyWith(fontSize: 11),
                     ),
                   ],
                 ),
               ),
-              if (post.mood != null)
-                Text(post.mood!, style: const TextStyle(fontSize: 22)),
+              if (widget.post.mood != null)
+                Text(widget.post.mood!, style: const TextStyle(fontSize: 22)),
             ],
           ),
           const SizedBox(height: 12),
           // Message
           Text(
-            post.message,
+            widget.post.message,
             style: AppTextStyles.body1.copyWith(fontSize: 14, height: 1.4),
           ),
           const SizedBox(height: 12),
           // Action row
           Row(
             children: [
-              _buildActionChip(Icons.favorite_border_rounded, '${post.likes}'),
+              GestureDetector(
+                onTap: _toggleLike,
+                behavior: HitTestBehavior.opaque,
+                child: _buildActionChip(
+                  _isLiked ? Icons.favorite_rounded : Icons.favorite_border_rounded,
+                  '$_likeCount',
+                  isActive: _isLiked,
+                ),
+              ),
               const SizedBox(width: 16),
-              _buildActionChip(Icons.chat_bubble_outline_rounded, 'Reply'),
+              GestureDetector(
+                onTap: () => _showSnackBar('Reply — coming soon!'),
+                behavior: HitTestBehavior.opaque,
+                child: _buildActionChip(Icons.chat_bubble_outline_rounded, 'Reply'),
+              ),
               const Spacer(),
-              Icon(
-                Icons.more_horiz_rounded,
-                size: 20,
-                color: AppColors.textTertiary,
+              GestureDetector(
+                onTap: () => _showSnackBar('More options — coming soon!'),
+                behavior: HitTestBehavior.opaque,
+                child: Padding(
+                  padding: const EdgeInsets.all(4),
+                  child: Icon(
+                    Icons.more_horiz_rounded,
+                    size: 20,
+                    color: AppColors.textTertiary,
+                  ),
+                ),
               ),
             ],
           ),
@@ -115,9 +169,9 @@ class SocialPostCard extends StatelessWidget {
 
   Widget _buildAvatar() {
     // Generate a color from username
-    final colorIndex = post.userName.hashCode % _avatarColors.length;
+    final colorIndex = widget.post.userName.hashCode % _avatarColors.length;
     final bgColor = _avatarColors[colorIndex.abs()];
-    final initials = post.userName.split(' ').map((n) => n[0]).take(2).join();
+    final initials = widget.post.userName.split(' ').map((n) => n[0]).take(2).join();
 
     return Container(
       width: 42,
@@ -139,16 +193,26 @@ class SocialPostCard extends StatelessWidget {
     );
   }
 
-  Widget _buildActionChip(IconData icon, String label) {
-    return Row(
-      children: [
-        Icon(icon, size: 18, color: AppColors.textTertiary),
-        const SizedBox(width: 4),
-        Text(
-          label,
-          style: AppTextStyles.caption.copyWith(fontSize: 12),
-        ),
-      ],
+  Widget _buildActionChip(IconData icon, String label, {bool isActive = false}) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        children: [
+          Icon(
+            icon,
+            size: 18,
+            color: isActive ? AppColors.error : AppColors.textTertiary,
+          ),
+          const SizedBox(width: 4),
+          Text(
+            label,
+            style: AppTextStyles.caption.copyWith(
+              fontSize: 12,
+              color: isActive ? AppColors.error : null,
+            ),
+          ),
+        ],
+      ),
     );
   }
 

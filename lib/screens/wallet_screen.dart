@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../theme/app_theme.dart';
@@ -9,9 +10,27 @@ import '../widgets/loyalty_stamp.dart';
 class WalletScreen extends StatelessWidget {
   const WalletScreen({super.key});
 
+  void _showSnackBar(BuildContext context, String message) {
+    HapticFeedback.lightImpact();
+    ScaffoldMessenger.of(context).hideCurrentSnackBar();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        duration: const Duration(seconds: 2),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    final uid = FirebaseAuth.instance.currentUser!.uid;
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid == null) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
     final firestoreService = FirestoreService();
 
     return Scaffold(
@@ -50,7 +69,7 @@ class WalletScreen extends StatelessWidget {
               ),
 
               // ── Action Buttons ──
-              _buildActionButtons(),
+              _buildActionButtons(context),
               const SizedBox(height: 30),
             ],
           ),
@@ -214,24 +233,30 @@ class WalletScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildActionButtons() {
+  Widget _buildActionButtons(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20),
       child: Row(
         children: [
           Expanded(
-            child: _buildActionBtn(
-              icon: Icons.add_card_rounded,
-              label: 'Add Loyalty Card',
-              isPrimary: true,
+            child: GestureDetector(
+              onTap: () => _showSnackBar(context, '💳 Add Loyalty Card — coming soon!'),
+              child: _buildActionBtn(
+                icon: Icons.add_card_rounded,
+                label: 'Add Loyalty Card',
+                isPrimary: true,
+              ),
             ),
           ),
           const SizedBox(width: 14),
           Expanded(
-            child: _buildActionBtn(
-              icon: Icons.card_giftcard_rounded,
-              label: 'View Rewards',
-              isPrimary: false,
+            child: GestureDetector(
+              onTap: () => _showSnackBar(context, '🎁 View Rewards — coming soon!'),
+              child: _buildActionBtn(
+                icon: Icons.card_giftcard_rounded,
+                label: 'View Rewards',
+                isPrimary: false,
+              ),
             ),
           ),
         ],

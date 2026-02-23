@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'theme/app_theme.dart';
 import 'screens/auth/login_screen.dart';
 import 'screens/home_screen.dart';
@@ -10,6 +11,7 @@ import 'screens/social_screen.dart';
 import 'screens/wallet_screen.dart';
 import 'screens/activity_screen.dart';
 import 'screens/stores_screen.dart';
+import 'services/seed_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -41,8 +43,37 @@ class VonalCoffeeApp extends StatelessWidget {
   }
 }
 
-class AuthGate extends StatelessWidget {
+class AuthGate extends StatefulWidget {
   const AuthGate({super.key});
+
+  @override
+  State<AuthGate> createState() => _AuthGateState();
+}
+
+class _AuthGateState extends State<AuthGate> {
+  bool _hasSeeded = false;
+
+  Future<void> _autoSeedIfNeeded(String uid) async {
+    if (_hasSeeded) return;
+    _hasSeeded = true;
+
+    try {
+      // Check if stores collection has data
+      final storesSnap = await FirebaseFirestore.instance
+          .collection('stores')
+          .limit(1)
+          .get();
+
+      if (storesSnap.docs.isEmpty) {
+        // First time — seed the database with demo data
+        await SeedService().seedDatabase();
+        await SeedService().seedUserTransactions(uid);
+      }
+    } catch (e) {
+      // Silently fail — data will just show empty states
+      debugPrint('Auto-seed skipped: $e');
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -54,7 +85,20 @@ class AuthGate extends StatelessWidget {
             body: Center(child: CircularProgressIndicator()),
           );
         }
-        if (snapshot.hasData) {
+        if (snapshot.hasError) {
+          return Scaffold(
+            body: Center(
+              child: Text(
+                'Something went wrong. Please restart the app.',
+                style: AppTextStyles.body1,
+                textAlign: TextAlign.center,
+              ),
+            ),
+          );
+        }
+        if (snapshot.hasData && snapshot.data != null) {
+          // Auto-seed data on first login
+          _autoSeedIfNeeded(snapshot.data!.uid);
           return const MainScreen();
         }
         return const LoginScreen();

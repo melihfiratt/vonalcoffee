@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../theme/app_theme.dart';
 import '../services/firestore_service.dart';
 import '../models/social_post.dart';
@@ -27,11 +29,32 @@ class _SocialScreenState extends State<SocialScreen> {
             _buildTopBar(),
             const SizedBox(height: 6),
             
-            // ── Feed (Stream) ──
+            // ── Feed (Stream) — auto-updates on new posts ──
             Expanded(
               child: StreamBuilder<List<SocialPost>>(
                 stream: _firestoreService.getSocialPosts(),
                 builder: (context, snapshot) {
+                  // Error state
+                  if (snapshot.hasError) {
+                    debugPrint('🔴 Social Feed error: ${snapshot.error}');
+                    return Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.error_outline_rounded,
+                              size: 48, color: AppColors.error.withValues(alpha: 0.5)),
+                          const SizedBox(height: 12),
+                          Text(
+                            'Could not load feed.\nCheck Firestore rules.',
+                            style: AppTextStyles.body2,
+                            textAlign: TextAlign.center,
+                          ),
+                        ],
+                      ),
+                    );
+                  }
+
+                  // Loading state
                   if (!snapshot.hasData) {
                     return const Center(child: CircularProgressIndicator());
                   }
@@ -39,7 +62,21 @@ class _SocialScreenState extends State<SocialScreen> {
                   final posts = snapshot.data!;
                   
                   if (posts.isEmpty) {
-                    return const Center(child: Text('Be the first to check in!'));
+                    return Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Text('☕', style: TextStyle(fontSize: 48)),
+                          const SizedBox(height: 12),
+                          Text(
+                            'Be the first to check in!',
+                            style: AppTextStyles.body1.copyWith(
+                              color: AppColors.textSecondary,
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
                   }
 
                   return Column(
@@ -68,11 +105,202 @@ class _SocialScreenState extends State<SocialScreen> {
       ),
       // ── FAB for new post ──
       floatingActionButton: FloatingActionButton(
-        onPressed: () {},
+        onPressed: () => _showCheckInDialog(context),
         backgroundColor: AppColors.primary,
         elevation: 4,
         child: const Icon(Icons.edit_rounded, color: Colors.white),
       ),
+    );
+  }
+
+  void _showCheckInDialog(BuildContext context) {
+    HapticFeedback.mediumImpact();
+    final messageController = TextEditingController();
+    String selectedMood = '☕';
+    final moods = ['☕', '📚', '💻', '💬', '❤️', '🎉', '😴'];
+    bool isPosting = false;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AppColors.background,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (ctx, setModalState) {
+            return Padding(
+              padding: EdgeInsets.only(
+                left: 24,
+                right: 24,
+                top: 24,
+                bottom: MediaQuery.of(ctx).viewInsets.bottom + 24,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Center(
+                    child: Container(
+                      width: 40,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: AppColors.divider,
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  Text('Check In ☕', style: AppTextStyles.heading3),
+                  const SizedBox(height: 6),
+                  Text(
+                    'Share what you\'re up to at ${_selectedBranch.replaceAll("Vonal Coffee - ", "")}',
+                    style: AppTextStyles.body2,
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Mood selector
+                  Text('How are you feeling?', style: AppTextStyles.subtitle2),
+                  const SizedBox(height: 8),
+                  SizedBox(
+                    height: 44,
+                    child: ListView.builder(
+                      scrollDirection: Axis.horizontal,
+                      itemCount: moods.length,
+                      itemBuilder: (_, i) {
+                        final isSelected = moods[i] == selectedMood;
+                        return GestureDetector(
+                          onTap: () {
+                            setModalState(() => selectedMood = moods[i]);
+                          },
+                          child: AnimatedContainer(
+                            duration: const Duration(milliseconds: 200),
+                            width: 44,
+                            height: 44,
+                            margin: const EdgeInsets.only(right: 8),
+                            decoration: BoxDecoration(
+                              color: isSelected
+                                  ? AppColors.primary.withValues(alpha: 0.15)
+                                  : AppColors.surface,
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                color: isSelected
+                                    ? AppColors.primary
+                                    : AppColors.divider,
+                                width: isSelected ? 2 : 1,
+                              ),
+                            ),
+                            child: Center(
+                              child: Text(moods[i],
+                                  style: const TextStyle(fontSize: 20)),
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Message input
+                  TextField(
+                    controller: messageController,
+                    maxLines: 3,
+                    textCapitalization: TextCapitalization.sentences,
+                    decoration: const InputDecoration(
+                      hintText: 'What\'s on your mind?',
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Post button
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: isPosting
+                          ? null
+                          : () async {
+                              final message = messageController.text.trim();
+                              if (message.isEmpty) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: const Text('Please write something!'),
+                                    behavior: SnackBarBehavior.floating,
+                                    shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(10)),
+                                  ),
+                                );
+                                return;
+                              }
+
+                              setModalState(() => isPosting = true);
+
+                              try {
+                                // Get current user name from Firebase Auth
+                                final user =
+                                    FirebaseAuth.instance.currentUser;
+                                final userName =
+                                    user?.displayName ?? 'Vonal User';
+
+                                await _firestoreService.createPost(
+                                  userName: userName,
+                                  message: message,
+                                  branchName: _selectedBranch,
+                                  mood: selectedMood,
+                                );
+
+                                // Clear and close
+                                messageController.clear();
+                                if (ctx.mounted) Navigator.pop(ctx);
+
+                                HapticFeedback.lightImpact();
+                                if (context.mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: const Text(
+                                          '✅ Checked in successfully!'),
+                                      behavior: SnackBarBehavior.floating,
+                                      shape: RoundedRectangleBorder(
+                                          borderRadius:
+                                              BorderRadius.circular(10)),
+                                    ),
+                                  );
+                                }
+                              } catch (e) {
+                                debugPrint('🔴 Post creation error: $e');
+                                setModalState(() => isPosting = false);
+                                if (context.mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text('Error: $e'),
+                                      behavior: SnackBarBehavior.floating,
+                                      backgroundColor: AppColors.error,
+                                      shape: RoundedRectangleBorder(
+                                          borderRadius:
+                                              BorderRadius.circular(10)),
+                                    ),
+                                  );
+                                }
+                              }
+                            },
+                      child: isPosting
+                          ? const SizedBox(
+                              height: 20,
+                              width: 20,
+                              child: CircularProgressIndicator(
+                                color: Colors.white,
+                                strokeWidth: 2,
+                              ),
+                            )
+                          : const Text('Post Check-In'),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
     );
   }
 
