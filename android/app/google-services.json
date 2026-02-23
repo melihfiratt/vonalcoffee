@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "46229639644",
+    "project_id": "vonalcoffee",
+    "storage_bucket": "vonalcoffee.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:46229639644:android:ec58fa496d5546dc227f19",
+        "android_client_info": {
+          "package_name": "com.vonalcoffee.vonal_coffee"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCR27C_-Sos0MBdSOlEh5Yxmuw9WHoarws"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
