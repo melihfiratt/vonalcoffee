@@ -11,13 +11,32 @@ class QRScannerScreen extends StatefulWidget {
   State<QRScannerScreen> createState() => _QRScannerScreenState();
 }
 
-class _QRScannerScreenState extends State<QRScannerScreen> {
+class _QRScannerScreenState extends State<QRScannerScreen> with WidgetsBindingObserver {
   final _firestoreService = FirestoreService();
   final MobileScannerController _scannerController = MobileScannerController();
   bool _isProcessing = false;
 
   @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.inactive ||
+        state == AppLifecycleState.paused) {
+      _scannerController.stop();
+    } else if (state == AppLifecycleState.resumed) {
+      if (!_isProcessing) {
+        _scannerController.start();
+      }
+    }
+  }
+
+  @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _scannerController.dispose();
     super.dispose();
   }
@@ -31,9 +50,14 @@ class _QRScannerScreenState extends State<QRScannerScreen> {
     _scannerController.stop();
 
     final rawValue = barcode.rawValue!;
-    // Parse UID from QR: "vonal-coffee://loyalty/{uid}"
+    // Parse UID from QR: "vonal-coffee://loyalty/{uid}" or "vonal-coffee://claim-reward/{uid}"
     String? uid;
-    if (rawValue.startsWith('vonal-coffee://loyalty/')) {
+    bool isRewardClaim = false;
+
+    if (rawValue.startsWith('vonal-coffee://claim-reward/')) {
+      uid = rawValue.replaceFirst('vonal-coffee://claim-reward/', '');
+      isRewardClaim = true;
+    } else if (rawValue.startsWith('vonal-coffee://loyalty/')) {
       uid = rawValue.replaceFirst('vonal-coffee://loyalty/', '');
     }
 
@@ -52,7 +76,11 @@ class _QRScannerScreenState extends State<QRScannerScreen> {
     }
 
     if (mounted) {
-      _showStampSheet(user);
+      if (isRewardClaim) {
+        _showRewardClaimSheet(user);
+      } else {
+        _showStampSheet(user);
+      }
     }
   }
 
@@ -209,6 +237,125 @@ class _QRScannerScreenState extends State<QRScannerScreen> {
               ),
             );
           },
+        );
+      },
+    ).whenComplete(() {
+      if (!_isProcessing) return;
+      _resetScanner();
+    });
+  }
+
+  void _showRewardClaimSheet(UserProfile user) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: AdminColors.card,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (ctx) {
+        return Padding(
+          padding: const EdgeInsets.fromLTRB(24, 16, 24, 32),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Handle
+              Container(
+                width: 40, height: 4,
+                decoration: BoxDecoration(
+                  color: AdminColors.divider,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const SizedBox(height: 20),
+
+              // Customer info
+              CircleAvatar(
+                radius: 32,
+                backgroundColor: AppColors.gold.withValues(alpha: 0.15),
+                child: Text(
+                  user.firstName.isNotEmpty ? user.firstName[0].toUpperCase() : '?',
+                  style: AppTextStyles.heading1.copyWith(
+                    color: AppColors.gold,
+                    fontSize: 28,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                user.fullName,
+                style: AppTextStyles.heading3.copyWith(color: AdminColors.textPrimary),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'Mevcut Stamp: ${user.stamps} / ${user.totalStamps}',
+                style: AppTextStyles.body2.copyWith(color: AdminColors.textSecondary),
+              ),
+              const SizedBox(height: 24),
+
+              // Reward prompt
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: AppColors.gold.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: AppColors.gold.withValues(alpha: 0.3)),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.celebration_rounded, color: AppColors.gold, size: 28),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        'Bu müşteri ${user.totalStamps} damgaya ulaştı. 1 Ücretsiz Kahve verebilirsiniz!',
+                        style: AppTextStyles.subtitle2.copyWith(color: AdminColors.textPrimary),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 32),
+
+              // Approve button
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () async {
+                    Navigator.pop(ctx);
+                    if (user.stamps < user.totalStamps) {
+                      _showError('Yetersiz damga sayısı');
+                      _resetScanner();
+                      return;
+                    }
+                    try {
+                      await _firestoreService.claimReward(user.id, user.totalStamps);
+                      if (mounted) {
+                        ScaffoldMessenger.of(this.context).showSnackBar(
+                          SnackBar(
+                            content: Text('✅ ${user.firstName} kahvesini aldı! (${user.totalStamps} damga düşüldü)'),
+                            backgroundColor: AppColors.gold,
+                            behavior: SnackBarBehavior.floating,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                          ),
+                        );
+                      }
+                    } catch (e) {
+                      _showError('Ödül onaylanamadı: $e');
+                    }
+                    _resetScanner();
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.gold,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                  ),
+                  child: Text(
+                    'Ödülü Onayla (Ücretsiz Kahve Ver)',
+                    style: AppTextStyles.button.copyWith(color: AppColors.background),
+                  ),
+                ),
+              ),
+            ],
+          ),
         );
       },
     ).whenComplete(() {

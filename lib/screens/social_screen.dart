@@ -285,11 +285,11 @@ class _SocialScreenState extends State<SocialScreen> {
                             },
                       child: isPosting
                           ? const SizedBox(
-                              height: 20,
-                              width: 20,
+                              height: 24,
+                              width: 24,
                               child: CircularProgressIndicator(
                                 color: Colors.white,
-                                strokeWidth: 2,
+                                strokeWidth: 2.5,
                               ),
                             )
                           : const Text('Post Check-In'),

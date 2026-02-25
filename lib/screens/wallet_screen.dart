@@ -69,7 +69,7 @@ class WalletScreen extends StatelessWidget {
               ),
 
               // ── Action Buttons ──
-              _buildActionButtons(context),
+              _buildActionButtons(context, snapshot.data!, uid),
               const SizedBox(height: 30),
             ],
           ),
@@ -233,7 +233,7 @@ class WalletScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildActionButtons(BuildContext context) {
+  Widget _buildActionButtons(BuildContext context, UserProfile user, String uid) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20),
       child: Row(
@@ -251,7 +251,13 @@ class WalletScreen extends StatelessWidget {
           const SizedBox(width: 14),
           Expanded(
             child: GestureDetector(
-              onTap: () => _showSnackBar(context, '🎁 View Rewards — coming soon!'),
+              onTap: () {
+                if (user.hasFreeCoffee) {
+                  _showRewardQRSheet(context, user, uid);
+                } else {
+                  _showSnackBar(context, '🎁 You need ${user.stampsRemaining} more stamps!');
+                }
+              },
               child: _buildActionBtn(
                 icon: Icons.card_giftcard_rounded,
                 label: 'View Rewards',
@@ -261,6 +267,91 @@ class WalletScreen extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+
+  void _showRewardQRSheet(BuildContext context, UserProfile user, String uid) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: AppColors.background,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (context) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 40, height: 4,
+                  decoration: BoxDecoration(
+                    color: AppColors.divider,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+                const SizedBox(height: 24),
+                const Icon(Icons.card_giftcard_rounded, color: AppColors.gold, size: 48),
+                const SizedBox(height: 16),
+                Text(
+                  'Your Free Coffee QR',
+                  style: AppTextStyles.heading2,
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Show this QR to the barista to claim your free reward.',
+                  textAlign: TextAlign.center,
+                  style: AppTextStyles.body2.copyWith(color: AppColors.textSecondary),
+                ),
+                const SizedBox(height: 32),
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    border: Border.all(
+                      color: AppColors.gold.withValues(alpha: 0.3),
+                      width: 3,
+                    ),
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: QrImageView(
+                    data: 'vonal-coffee://claim-reward/$uid',
+                    version: QrVersions.auto,
+                    size: 220,
+                    eyeStyle: const QrEyeStyle(
+                      eyeShape: QrEyeShape.circle,
+                      color: AppColors.primary,
+                    ),
+                    dataModuleStyle: const QrDataModuleStyle(
+                      dataModuleShape: QrDataModuleShape.circle,
+                      color: AppColors.primary,
+                    ),
+                    gapless: true,
+                  ),
+                ),
+                const SizedBox(height: 32),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: () => Navigator.pop(context),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.surface,
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                        side: const BorderSide(color: AppColors.divider),
+                      ),
+                    ),
+                    child: Text('Close', style: AppTextStyles.button.copyWith(color: AppColors.textPrimary)),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 

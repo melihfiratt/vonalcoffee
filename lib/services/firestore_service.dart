@@ -257,6 +257,25 @@ class FirestoreService {
     }
   }
 
+  // ── Admin: Claim Reward (Deduct stamps) ──
+  Future<void> claimReward(String uid, int requiredStamps) async {
+    try {
+      await _db.collection('users').doc(uid).update({
+        'stamps': FieldValue.increment(-requiredStamps),
+      });
+      // Log the reward claim
+      await _db.collection('stamp_logs').add({
+        'userId': uid,
+        'stampsAdded': -requiredStamps,
+        'type': 'reward_claim',
+        'timestamp': FieldValue.serverTimestamp(),
+      });
+    } catch (e) {
+      debugPrint('🔴 claimReward error: $e');
+      rethrow;
+    }
+  }
+
   // ── Campaigns (single reads for admin, stream for home) ──
   Stream<List<Campaign>> getCampaigns() {
     return _db

@@ -13,7 +13,7 @@ class StoresScreen extends StatefulWidget {
   State<StoresScreen> createState() => _StoresScreenState();
 }
 
-class _StoresScreenState extends State<StoresScreen> {
+class _StoresScreenState extends State<StoresScreen> with WidgetsBindingObserver {
   final _firestoreService = FirestoreService();
   GoogleMapController? _mapController;
 
@@ -49,10 +49,22 @@ class _StoresScreenState extends State<StoresScreen> {
         icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen),
       ),
     };
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.inactive ||
+        state == AppLifecycleState.paused) {
+      _mapController?.setMapStyle('[]'); // Remove complex assets / styles
+    } else if (state == AppLifecycleState.resumed) {
+      _mapController?.setMapStyle(_mapStyle); // Restore custom styles
+    }
   }
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _mapController?.dispose();
     super.dispose();
   }

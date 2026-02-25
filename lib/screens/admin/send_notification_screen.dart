@@ -177,9 +177,9 @@ class _SendNotificationScreenState extends State<SendNotificationScreen> {
                   ),
                   child: _isSending
                       ? const SizedBox(
-                          height: 20, width: 20,
+                          height: 24, width: 24,
                           child: CircularProgressIndicator(
-                              color: Colors.white, strokeWidth: 2))
+                              color: Colors.white, strokeWidth: 2.5))
                       : Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [

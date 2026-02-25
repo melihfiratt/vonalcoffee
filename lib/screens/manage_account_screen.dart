@@ -275,11 +275,11 @@ class _ManageAccountScreenState extends State<ManageAccountScreen> {
                         ),
                         child: _isSaving
                             ? const SizedBox(
-                                height: 22,
-                                width: 22,
+                                height: 24,
+                                width: 24,
                                 child: CircularProgressIndicator(
                                   color: Colors.white,
-                                  strokeWidth: 2,
+                                  strokeWidth: 2.5,
                                 ),
                               )
                             : Text(

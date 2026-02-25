@@ -5,7 +5,7 @@ import 'package:http/http.dart' as http;
 class NotificationService {
   // ⚠️ Replace with your actual OneSignal credentials
   static const String _appId = 'bfd6bbd3-de11-4c38-9658-a533459a3301';
-  static const String _restApiKey = 'os_v2_app_x7llxu66cfgdrfsyuuzulgrtagwcn7oz6kiet7vkbn2jxlbqvok2tf7lpyjb524b3dav4xkr63wy7ln6ueqd37ymc74bj4sr4dc7kaq';
+  static const String _restApiKey = 'os_v2_app_x7llxu66cfgdrfsyuuzulgrtafw5zmlu2piuggvq5gtkdznjjghgdpjbg5cyigiqnh6c2bjib4b6b6bxn7kkbijz6aacluab5n4bl6i';
 
   /// Broadcasts a push notification to all subscribed users via OneSignal REST API.
   /// Returns true if the notification was sent successfully.
@@ -18,7 +18,7 @@ class NotificationService {
         Uri.parse('https://onesignal.com/api/v1/notifications'),
         headers: {
           'Content-Type': 'application/json; charset=utf-8',
-          'Authorization': 'Basic $_restApiKey',
+          'Authorization': 'Key $_restApiKey',
         },
         body: jsonEncode({
           'app_id': _appId,
